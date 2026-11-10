@@ -108,17 +108,12 @@ GEM2Engine_files_validator/
 ├── gui/
 │   ├── __init__.py
 │   └── main.py          # Tkinter desktop application (no external deps)
-├── tools/                # (reference: scripts live in salida_mod/tools/)
+├── tools/                # General-purpose Python scripts (not model-specific)
 │   ├── gem2_validator.py   # Main offline GEM2 validator (auto-repair + sync)
 │   ├── mod_validator.py    # First-generation validator
-│   └── pre_re_scan.py      # Static pre-scan scanner (early issue detection)
-├── blender/                # Blender pipeline scripts (4-part export)
-│   ├── run_full_export.py
-│   └── ...
-├── reverse_engineering/ref/  # Base-game reference files for format comparison
-└── salida_mod/             # Example mod output (Iron Nest)
-    ├── mod.info
-    └── resource/
+│   ├── pre_re_scan.py      # Static pre-scan scanner (early issue detection)
+│   └── rebuild_mdl.py      # MDL reorganizer for post-Blender export
+└── reverse_engineering/ref/  # Base-game reference files for format comparison
 ```
 
 ## What It Validates

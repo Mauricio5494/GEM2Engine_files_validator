@@ -28,21 +28,9 @@ COLOR_WARN = "#f39c12"
 COLOR_TEXT = "#333333"
 COLOR_BORDER = "#cccccc"
 
-# Rutas por defecto (ajustables por el usuario)
-DEFAULT_MOD_DIR = str(Path.home() / "Descargas" / "Iron_Nest_CTA_mod" / "salida_mod")
-DEFAULT_INSTALLED_DIR = str(
-    Path.home()
-    / ".var"
-    / "app"
-    / "com.valvesoftware.Steam"
-    / ".local"
-    / "Steam"
-    / "steamapps"
-    / "common"
-    / "Call to Arms - Gates of Hell"
-    / "mods"
-    / "iron_nest"
-)
+# Rutas por defecto (vacías: el usuario las selecciona con "Examinar…")
+DEFAULT_MOD_DIR = ""
+DEFAULT_INSTALLED_DIR = ""
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "tools"
 
@@ -164,6 +152,11 @@ class Gem2ValidatorGUI:
         ttk.Button(dir_frame, text="Examinar…", command=self._browse_mod_dir).pack(
             side=tk.LEFT, padx=(0, 5)
         )
+        ttk.Label(
+            dir_frame,
+            text="Seleccioná tu carpeta salida_mod/",
+            style="Subtitle.TLabel",
+        ).pack(side=tk.LEFT, padx=(10, 0))
 
         # ── Pestañas ──
         self.notebook = ttk.Notebook(self.root)
@@ -660,53 +653,40 @@ class Gem2ValidatorGUI:
         )
 
     # ── game.log ──
-    def _game_log_path(self) -> Path:
-        return Path(
-            str(Path.home())
-            / ".var"
-            / "app"
-            / "com.valvesoftware.Steam"
-            / ".local"
-            / "Steam"
-            / "steamapps"
-            / "compatdata"
-            / "400750"
-            / "pfx"
-            / "drive_c"
-            / "users"
-            / "steamuser"
-            / "Documents"
-            / "my games"
-            / "gates of hell"
-            / "log"
-            / "game.log"
-        )
+    def _game_log_path(self):
+        """No hay ruta por defecto: el usuario debe seleccionar su game.log manualmente."""
+        return None
 
     def _open_game_log(self):
-        log_path = self._game_log_path()
-        if log_path.exists():
-            try:
-                if sys.platform.startswith("linux"):
-                    subprocess.Popen(["xdg-open", str(log_path)])
-                else:
-                    os.startfile(str(log_path))  # type: ignore[attr-defined]
-            except Exception as e:
-                messagebox.showerror("Error", f"No se pudo abrir el archivo:\n{e}")
-        else:
-            messagebox.showwarning(
-                "No encontrado",
-                f"No se encontró el game.log en:\n{log_path}\n\n"
-                "Verificá que el juego esté instalado vía Steam Flatpak.",
-            )
+        log_path = filedialog.askopenfilename(
+            title="Seleccionar game.log",
+            filetypes=[("Log files", "*.log"), ("All files", "*.*")],
+        )
+        if not log_path:
+            return
+        try:
+            if sys.platform.startswith("linux"):
+                subprocess.Popen(["xdg-open", log_path])
+            else:
+                os.startfile(log_path)  # type: ignore[attr-defined]
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo abrir el archivo:\n{e}")
 
     def _refresh_game_log(self):
-        log_path = self._game_log_path()
+        log_path = filedialog.askopenfilename(
+            title="Seleccionar game.log",
+            filetypes=[("Log files", "*.log"), ("All files", "*.*")],
+        )
+        if not log_path:
+            return
+
         self._clear_output(self.output_log)
 
-        if not log_path.exists():
+        p = Path(log_path)
+        if not p.exists():
             self._append_output(
                 self.output_log,
-                f"game.log no encontrado en:\n{log_path}\n",
+                f"Archivo no encontrado:\n{log_path}\n",
                 "error",
             )
             return

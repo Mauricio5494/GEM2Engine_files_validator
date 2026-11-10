@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=GEM2 Engine Validator
 Comment=Offline validator and auto-repair tool for Call to Arms - Gates of Hell mods
-Exec=python3 %F/gui/main.py
+Exec=bash -c 'cd "$(dirname "%k")" && python3 gui/main.py'
 Icon=text-x-python
 Terminal=false
 Type=Application

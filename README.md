@@ -1,6 +1,6 @@
 # GEM2 Engine Files Validator
 
-Offline validator and auto-repair tool for **Call to Arms - Gates of Hell** (GEM2 engine) mods. Validates SDL-based files (`.mdl`, `.def`, `.ext`, `.inc`, `.set`) to prevent CTDs and syncs corrected files to your game mod directory.
+Validador offline y herramienta de auto-reparación para mods de **Call to Arms - Gates of Hell** (motor GEM2). Valida archivos basados en SDL (`.mdl`, `.def`, `.ext`, `.inc`, `.set`) para prevenir CTDs y sincroniza los archivos corregidos con el directorio de mods del juego.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
@@ -8,36 +8,37 @@ Offline validator and auto-repair tool for **Call to Arms - Gates of Hell** (GEM
 
 ---
 
-## Table of Contents
+## Índice
 
-- [About](#about)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Graphical User Interface (GUI)](#graphical-user-interface-gui)
-- [Repository Structure](#repository-structure)
-- [What It Validates](#what-it-validates)
-- [Reverse Engineering Methodology](#reverse-engineering-methodology)
-- [Legal Disclaimer](#legal-disclaimer)
-- [License](#license)
+- [Acerca del proyecto](#acerca-del-proyecto)
+- [Características](#características)
+- [Instalación](#instalación)
+- [Uso sin terminal (doble clic](#uso-sin-terminal-doble-clic)
+- [Uso](#uso)
+- [Interfaz gráfica (GUI)](#interfaz-gráfica-gui)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Qué valida](#qué-valida)
+- [Metodología de ingeniería inversa](#metodología-de-ingeniería-inversa)
+- [Aviso legal](#aviso-legal)
+- [Licencia](#licencia)
 
 ---
 
-## About
+## Acerca del proyecto
 
-The **GEM2 Engine Files Validator** is a Python-based offline tool created for modders of *Call to Arms - Gates of Hell* (GEM2 engine). It parses, validates, and auto-repairs the SDL-formatted data files that define vehicles, weapons, armor, rosters, and other gameplay entities — catching syntax errors, malformed includes, and structural issues before they cause **CTDs (Crash To Desktop)** in-game.
+El **GEM2 Engine Files Validator** es una herramienta offline en Python creada para modders de *Call to Arms - Gates of Hell* (motor GEM2). Analiza, valida y auto-repara los archivos con formato SDL que definen vehículos, armas, armaduras, plantillas y otras entidades del juego — detectando errores de sintaxis, includes mal formados y problemas estructurales antes de que provoquen **CTDs (Crash To Desktop)** en el juego.
 
-It was developed alongside the **Iron Nest** mod (a self-propelled four-legged artillery unit) and uses insights from reverse-engineering the game binaries and comparing against base-game reference files.
+Fue desarrollado para modders de *Call to Arms - Gates of Hell* y utiliza conocimientos obtenidos de la ingeniería inversa de los binarios del juego y la comparación con archivos de referencia del juego base.
 
-## Features
+## Características
 
-- **Validate** `.mdl`, `.def`, `.ext`, `.inc`, and `.set` files without launching the game
-- **Auto-repair** common issues: missing leading slashes in includes, unbalanced braces/parentheses, LF→CRLF conversion, invalid SDL block names
-- **Detect** blocks that don't belong in a file type (e.g. `{Obstacle}` inside `.mdl`)
-- **Sync** validated files from your working directory to the installed Steam/Proton mod folder
-- **Exit codes**: `0` = OK, `1` = repairable errors, `2` = fatal errors
+- **Validar** archivos `.mdl`, `.def`, `.ext`, `.inc` y `.set` sin lanzar el juego
+- **Auto-reparar** problemas comunes: barras iniciales faltantes en includes, llaves/paréntesis desbalanceados, conversión LF→CRLF, nombres de bloque SDL inválidos
+- **Detectar** bloques que no pertenecen a un tipo de archivo (por ejemplo, `{Obstacle}` dentro de un `.mdl`)
+- **Sincronizar** archivos validados desde el directorio de trabajo a la carpeta `mods/iron_nest/` del juego instalado (Steam/Proton)
+- **Códigos de salida**: `0` = OK, `1` = errores reparables, `2` = errores fatales
 
-## Installation
+## Instalación
 
 ```bash
 git clone https://github.com/Mauricio5494/GEM2Engine_files_validator.git
@@ -54,145 +55,139 @@ No se requieren dependencias externas de Python. La aplicación usa solo la bibl
 | **Linux** | Python 3.8+ y el paquete `python3-tk` (en Debian/Ubuntu: `sudo apt install python3-tk`). |
 | **macOS** | **No soportado** (por decisión del autor). |
 
-## Running without a terminal (double-click)
+## Uso sin terminal (doble clic)
 
-You do **not** need to open a terminal to use the GUI.
+No necesitas abrir una terminal para usar la interfaz gráfica.
 
 ### Windows
 
-Double-click **`run_gui.bat`**. It launches the app with `pythonw.exe` (no console window).
+Haz doble clic en **`run_gui.bat`**. Inicia la aplicación con `pythonw.exe` (sin ventana de consola).
 
 ### Linux
 
-1. Make the launcher executable:
+1. Dale permiso de ejecución:
 
    ```bash
    chmod +x run_gui.sh
    ```
 
-2. Double-click **`run_gui.sh`** in your file manager, or run:
+2. Haz doble clic en **`run_gui.sh`** en tu gestor de archivos, o ejecuta:
 
    ```bash
    ./run_gui.sh
    ```
 
-3. Optionally, copy **`GEM2Validator.desktop`** to `~/.local/share/applications/` to add it to your desktop environment's application menu.
+3. Opcionalmente, copia **`GEM2Validator.desktop`** a `~/.local/share/applications/` para añadirlo al menú de aplicaciones de tu entorno de escritorio.
 
+## Uso
 
-## Usage
-
-Validate only (report, no modifications):
-
-```bash
-python3 salida_mod/tools/gem2_validator.py salida_mod/ -v
-```
-
-Validate + auto-repairable fixes:
+Validar solo (reporte, sin modificaciones):
 
 ```bash
-python3 salida_mod/tools/gem2_validator.py salida_mod/ --fix -v
+python3 gui/main.py
 ```
 
-Validate + auto-repair + sync to installed game mod directory:
+O directamente los scripts de consola:
 
 ```bash
-python3 salida_mod/tools/gem2_validator.py salida_mod/ --fix --sync -v
+python3 tools/gem2_validator.py salida_mod/ -v
+python3 tools/gem2_validator.py salida_mod/ --fix -v
+python3 tools/gem2_validator.py salida_mod/ --fix --sync -v
+python3 tools/gem2_validator.py salida_mod/ --sync -v
 ```
 
-Only sync (no validation):
+> **Nota:** Después de editar archivos en tu directorio de trabajo, siempre ejecuta el validador con `--sync` antes de probar en el juego. El juego lee desde el directorio de mods instalado, no desde tu carpeta de origen.
 
-```bash
-python3 salida_mod/tools/gem2_validator.py salida_mod/ --sync -v
-```
+## Interfaz gráfica (GUI)
 
-> **Note:** After editing files in your working directory, always run the validator with `--sync` before testing in-game. The game reads from the installed mod directory, not your source folder.
+Una aplicación de escritorio basada en Tkinter está incluida en `gui/`. No requiere dependencias externas — solo Python 3.8+ con tkinter.
 
-## Graphical User Interface (GUI)
+### Lanzar la GUI (sin necesidad de terminal)
 
-A Tkinter-based desktop application is included under `gui/`. It requires no external dependencies — just Python 3.8+ with tkinter.
+| Plataforma | Archivo | Cómo ejecutar |
+|------------|---------|---------------|
+| **Windows** | `run_gui.bat` | Doble clic (usa `pythonw.exe`, sin ventana de consola) |
+| **Linux** | `run_gui.sh` | Doble clic o `./run_gui.sh` (da permiso con `chmod +x`) |
+| **Cualquiera** | `gui/main.py` | `python3 gui/main.py` (alternativa) |
 
-### Launching the GUI (no terminal needed)
+### Qué hace la GUI
 
-| Platform | File | How to run |
-|----------|------|------------|
-| **Windows** | `run_gui.bat` | Double-click (uses `pythonw.exe`, no console window) |
-| **Linux** | `run_gui.sh` | Double-click or `./run_gui.sh` (make executable with `chmod +x`) |
-| **Any** | `gui/main.py` | `python3 gui/main.py` (fallback) |
+| Pestaña | Propósito |
+|---------|-----------|
+| **Validar y Reparar** | Ejecuta `gem2_validator.py` con opciones `--fix`, `--sync` y `-v` mediante botones. Muestra salida en tiempo real con colores por severidad. |
+| **Sincronizar con Juego** | Copia archivos validados desde tu directorio de trabajo a la carpeta instalada de tu mod en el juego (`mods/<tu_mod>/`). |
+| **Visor de game.log** | Abre y lee el `game.log` de Proton con líneas de error resaltadas (`«`, `EXCEPTION_ACCESS_VIOLATION`, `File not found`, etc.). |
+| **Pre-RE Scan** | Ejecuta el escáner estático preliminar (`pre_re_scan.py`) para detectar problemas temprano antes del validador principal. |
+| **Rebuild MDL** | Ejecuta `rebuild_mdl.py` para redistribuir bloques `{VolumeView}` por hueso y corregir transformaciones `Matrix34` después de exportar desde Blender. |
 
-### What the GUI does
+Antes de usar cualquier pestaña, haz clic en **Examinar…** para seleccionar tu directorio de salida y, para sincronizar, tu carpeta instalada de mods en el juego.
 
-| Tab | Purpose |
-|-----|---------|
-| **Validar y Reparar** | Run `gem2_validator.py` with `--fix`, `--sync`, and `-v` options via buttons. See real-time output with color-coded severity. |
-| **Sincronizar con Juego** | Copy validated files from your working directory to the installed Steam/Proton mod folder (`mods/iron_nest/`). |
-| **Visor de game.log** | Open and read the Proton `game.log` with highlighted error lines (`«`, `EXCEPTION_ACCESS_VIOLATION`, `File not found`, etc.). |
-| **Pre-RE Scan** | Run the static pre-scan scanner (`pre_re_scan.py`) for early issue detection before the main validator. |
-| **Rebuild MDL** | Run `rebuild_mdl.py` to redistribute `{VolumeView}` blocks per bone and fix `Matrix34` transforms after Blender export. |
+### Crear ejecutables independientes (para releases)
 
-Before using any tab, click **Examinar…** (Browse) to select your `salida_mod/` directory and, for sync, your installed `mods/iron_nest/` folder.
-
-### Creating standalone executables (for releases)
-
-To distribute the app as a single `.exe` (Windows) or binary (Linux) without requiring users to install Python, use **PyInstaller**:
+Para distribuir la aplicación como un solo `.exe` (Windows) o binario (Linux) sin que el usuario necesite instalar Python, usa **PyInstaller**:
 
 ```bash
 pip install pyinstaller
 pyinstaller --onefile --windowed --name GEM2Validator gui/main.py
 ```
 
-This produces a standalone executable in `dist/`. Releases can be built for Windows and Linux. **macOS is not supported.**
+Esto produce un ejecutable independiente en `dist/`. Las releases se pueden compilar para Windows y Linux. **macOS no es compatible.**
 
+---
 
-
-## Repository Structure
+## Estructura del repositorio
 
 ```
 GEM2Engine_files_validator/
 ├── LICENSE
 ├── README.md
+├── .gitignore
+├── run_gui.bat          # Lanzador para Windows (doble clic, sin terminal)
+├── run_gui.sh           # Lanzador para Linux (doble clic, sin terminal)
+├── GEM2Validator.desktop # Entrada de menú para entornos de escritorio Linux
 ├── gui/
 │   ├── __init__.py
-│   └── main.py          # Tkinter desktop application (no external deps)
-├── tools/                # General-purpose Python scripts (not model-specific)
-│   ├── gem2_validator.py   # Main offline GEM2 validator (auto-repair + sync)
-│   ├── mod_validator.py    # First-generation validator
-│   ├── pre_re_scan.py      # Static pre-scan scanner (early issue detection)
-│   └── rebuild_mdl.py      # MDL reorganizer for post-Blender export
-└── reverse_engineering/ref/  # Base-game reference files for format comparison
+│   └── main.py          # Aplicación de escritorio Tkinter (sin dependencias externas)
+└── tools/                # Scripts Python de propósito general (no específicos del modelo)
+    ├── gem2_validator.py   # Validador principal offline GEM2 (auto-reparar + sincronizar)
+    ├── mod_validator.py    # Primera versión del validador
+    ├── pre_re_scan.py      # Escáner estático preliminar (detección temprana)
+    └── rebuild_mdl.py      # Reorganizador de .mdl para después de exportar de Blender
+└── reverse_engineering/ref/  # Archivos de referencia del juego base para comparación de formatos
 ```
 
-## What It Validates
+## Qué valida
 
-| File Type | Checks | Auto-Repairs |
-|-----------|--------|--------------|
-| `.mdl` | Balanced braces, `{Volume}` blocks outside `{Skeleton}`, invalid block names, final brace depth | Removes loose `{Volume}` blocks |
-| `.def` | Balanced braces, include leading slash, `{game_entity}`, `{Extension "model.mdl"}` | Adds slash to includes |
-| `.ext` | Balanced braces/parens, include paths, `{icon}` removal, `brain_vehicle` args | Adds slashes, removes stray `{icon}`, adds parens |
-| `.inc` | `;SDL` header, CRLF line endings, container syntax | Converts LF→CRLF, adds `;SDL` header |
-| `.set` (roster) | `iron_nest` entry format, invalid `period(conquest)` | — |
-| `PATHER.SET` | Starts with `{Pathers` | — |
+| Tipo de archivo | Qué revisa | Auto-repara |
+|-----------------|------------|-------------|
+| `.mdl` | Llaves balanceadas, bloques `{Volume}` fuera de `{Skeleton}`, nombres de bloque inválidos, profundidad final de llaves | Elimina bloques `{Volume}` sueltos |
+| `.def` | Llaves balanceadas, barra inicial en includes, `{game_entity}`, `{Extension "modelo.mdl"}` | Añade barra a includes |
+| `.ext` | Llaves/paréntesis balanceados, rutas de includes, eliminación de `{icon}`, argumentos de `brain_vehicle` | Añade barras, elimina `{icon}` suelto, añade paréntesis |
+| `.inc` | Cabecera `;SDL`, finales de línea CRLF, sintaxis del contenedor | Convierte LF→CRLF, añade cabecera `;SDL` |
+| `.set` (plantilla) | Formato de entrada de unidad, `period(conquest)` inválido | — |
+| `PATHER.SET` | Empieza con `{Pathers` | — |
 
-## Reverse Engineering Methodology
+## Metodología de ingeniería inversa
 
-This tool was built by applying general reverse-engineering concepts to the GEM2 engine and the *Call to Arms - Gates of Hell* executable:
+Esta herramienta fue construida aplicando conceptos generales de ingeniería inversa al motor GEM2 y al ejecutable de *Call to Arms - Gates of Hell*:
 
-- **Static analysis** of file signatures and SDL structure by comparing mod files against base-game reference files (`tiger2h.mdl`, `tiger2h.def`, `tiger2h.ext`, `abm.inc`)
-- **Binary analysis** using disassemblers and debuggers (Ghidra, IDA Free, radare2, x64dbg) to identify engine classes that load `.ext`, `.inc`, `.ply`, `.mdl` files
-- **Error pattern mapping** from `game.log` (e.g. `eSDLReader.cpp`, `eResource.cpp`, `eIORepository.cpp`, `eSceneApi.cpp`) back to specific SDL syntax issues
-- **Runtime observation** of how the engine reads mod data in memory
+- **Análisis estático** de firmas de archivos y estructura SDL comparando archivos de mod con archivos de referencia del juego base (`tiger2h.mdl`, `tiger2h.def`, `tiger2h.ext`, `abm.inc`)
+- **Análisis binario** usando desensambladores y depuradores (Ghidra, IDA Free, radare2, x64dbg) para identificar clases del motor que cargan archivos `.ext`, `.inc`, `.ply`, `.mdl`
+- **Mapeo de patrones de error** desde `game.log` (por ejemplo, `eSDLReader.cpp`, `eResource.cpp`, `eIORepository.cpp`, `eSceneApi.cpp`) hasta problemas específicos de sintaxis SDL
+- **Observación en tiempo real** de cómo el motor lee los datos del mod en memoria
 
-> For niche games there is no exact public documentation on reversing a specific binary. This project applies general reversing techniques rather than relying on game-specific guides.
+> Para juegos de nicho no existe documentación pública exacta sobre cómo hacer ingeniería inversa de un binario específico. Este proyecto aplica técnicas generales de ingeniería inversa en lugar de depender de guías específicas del juego.
 
-## Legal Disclaimer
+## Aviso legal
 
-- This repository contains **only original code, scripts, and documentation** created by the author. It does **not** include copyrighted game assets from *Call to Arms - Gates of Hell` (textures, sounds, original models, etc.).
-- Reverse engineering may be restricted by the game's EULA or Terms of Service. Please review those before using this tool.
-- This software is provided "AS IS", without warranty of any kind. The author is not liable for any damage caused by modding your game installation.
+- Este repositorio contiene **únicamente código, scripts y documentación originales** creados por el autor. No incluye assets con copyright del juego *Call to Arms - Gates of Hell* (texturas, sonidos, modelos originales, etc.).
+- La ingeniería inversa puede estar restringida por el EULA o Términos de Servicio del juego. Revísalos antes de usar esta herramienta.
+- Este software se proporciona "TAL CUAL", sin garantía de ningún tipo. El autor no es responsable de ningún daño causado por modificar tu instalación del juego.
 
-## License
+## Licencia
 
-MIT License. See [LICENSE](LICENSE) for details.
+Licencia MIT. Consulta [LICENSE](LICENSE) para más detalles.
 
 ---
 
-*Built for the Call to Arms / Gates of Hell modding community.*
+*Creado para la comunidad de modding de Call to Arms / Gates of Hell.*

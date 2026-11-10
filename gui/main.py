@@ -44,7 +44,7 @@ DEFAULT_INSTALLED_DIR = str(
     / "iron_nest"
 )
 
-SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "salida_mod" / "tools"
+SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "tools"
 
 
 class Gem2ValidatorGUI:

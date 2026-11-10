@@ -14,6 +14,7 @@ Offline validator and auto-repair tool for **Call to Arms - Gates of Hell** (GEM
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Graphical User Interface (GUI)](#graphical-user-interface-gui)
 - [Repository Structure](#repository-structure)
 - [What It Validates](#what-it-validates)
 - [Reverse Engineering Methodology](#reverse-engineering-methodology)
@@ -73,13 +74,41 @@ python3 salida_mod/tools/gem2_validator.py salida_mod/ --sync -v
 
 > **Note:** After editing files in your working directory, always run the validator with `--sync` before testing in-game. The game reads from the installed mod directory, not your source folder.
 
+## Graphical User Interface (GUI)
+
+For users who prefer not to use the terminal, a Tkinter-based desktop application is included under `gui/`. It requires no external dependencies — just Python 3.8+ with tkinter.
+
+### Launching the GUI
+
+```bash
+python3 gui/main.py
+```
+
+### What the GUI does
+
+| Tab | Purpose |
+|-----|---------|
+| **Validar y Reparar** | Run `gem2_validator.py` with `--fix`, `--sync`, and `-v` options via buttons. See real-time output with color-coded severity. |
+| **Sincronizar con Juego** | Copy validated files from your working directory to the installed Steam/Proton mod folder (`mods/iron_nest/`). |
+| **Visor de game.log** | Open and read the Proton `game.log` with highlighted error lines (`«`, `EXCEPTION_ACCESS_VIOLATION`, `File not found`, etc.). |
+| **Pre-RE Scan** | Run the static pre-scan scanner (`pre_re_scan.py`) for early issue detection before the main validator. |
+| **Rebuild MDL** | Run `rebuild_mdl.py` to redistribute `{VolumeView}` blocks per bone and fix `Matrix34` transforms after Blender export. |
+
+### Screenshots (coming soon)
+
+Add screenshots of the GUI in action here.
+
+
 ## Repository Structure
 
 ```
 GEM2Engine_files_validator/
 ├── LICENSE
 ├── README.md
-├── tools/
+├── gui/
+│   ├── __init__.py
+│   └── main.py          # Tkinter desktop application (no external deps)
+├── tools/                # (reference: scripts live in salida_mod/tools/)
 │   ├── gem2_validator.py   # Main offline GEM2 validator (auto-repair + sync)
 │   ├── mod_validator.py    # First-generation validator
 │   └── pre_re_scan.py      # Static pre-scan scanner (early issue detection)

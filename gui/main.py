@@ -9,6 +9,7 @@ GEM2 engine (Call to Arms - Gates of Hell) without using the terminal.
 Depends only on the Python standard library (tkinter).
 """
 
+import json
 import subprocess
 import threading
 import tkinter as tk
@@ -33,12 +34,59 @@ DEFAULT_MOD_DIR = ""
 DEFAULT_INSTALLED_DIR = ""
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "tools"
+LOCALES_DIR = Path(__file__).resolve().parent / "locales"
+
+# Available languages: code -> (display name, flag)
+LANGUAGES = {
+    "en": ("English", "🇺🇸"),
+    "es": ("Español", "🇪🇸"),
+    "zh_CN": ("中文 (简体)", "🇨🇳"),
+    "zh_TW": ("中文 (繁體)", "🇹🇼"),
+}
+
+# Default language
+DEFAULT_LANG = "en"
+
+
+class I18n:
+    """Simple JSON-based localization helper."""
+
+    def __init__(self, locales_dir: Path, default_lang: str = "en"):
+        self.locales_dir = locales_dir
+        self.lang = default_lang
+        self._strings: dict = {}
+        self._load(default_lang)
+
+    def _load(self, lang: str):
+        path = self.locales_dir / f"{lang}.json"
+        if path.exists():
+            with open(path, "r", encoding="utf-8") as f:
+                self._strings = json.load(f)
+            self.lang = lang
+        else:
+            # Fallback to English
+            with open(self.locales_dir / "en.json", "r", encoding="utf-8") as f:
+                self._strings = json.load(f)
+            self.lang = "en"
+
+    def set_lang(self, lang: str):
+        self._load(lang)
+
+    def t(self, key: str, **kwargs) -> str:
+        value = self._strings.get(key, key)
+        if kwargs:
+            for k, v in kwargs.items():
+                value = value.replace("{" + k + "}", str(v))
+        return value
 
 
 class Gem2ValidatorGUI:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("GEM2 Engine Validator — Call to Arms / Gates of Hell")
+        self.i18n = I18n(LOCALES_DIR, DEFAULT_LANG)
+        self._t = self.i18n.t
+
+        self.root.title(self._t("app.title"))
         self.root.geometry("1000x750")
         self.root.minsize(850, 650)
         self.root.configure(bg=COLOR_BG)
@@ -49,6 +97,7 @@ class Gem2ValidatorGUI:
         self.auto_fix_var = tk.BooleanVar(value=False)
         self.sync_var = tk.BooleanVar(value=False)
         self.verbose_var = tk.BooleanVar(value=False)
+        self.only_errors_var = tk.BooleanVar(value=False)
         self.running = False
 
         self._setup_styles()
@@ -119,44 +168,59 @@ class Gem2ValidatorGUI:
             font=("Segoe UI", 9),
             padding=(5, 2),
         )
-        style.configure(
-            "Treeview",
-            background=COLOR_PANEL,
-            fieldbackground=COLOR_PANEL,
-            foreground=COLOR_TEXT,
-        )
 
     def _build_ui(self):
-        # ── Title ──
+        # ── Title bar ──
         title_frame = ttk.Frame(self.root)
         title_frame.pack(fill=tk.X, padx=20, pady=(15, 5))
 
-        ttk.Label(
+        self.lbl_title = ttk.Label(
             title_frame,
-            text="GEM2 Engine Validator",
+            text=self._t("app.title"),
             style="Title.TLabel",
-        ).pack(side=tk.LEFT)
+        )
+        self.lbl_title.pack(side=tk.LEFT)
+
         ttk.Label(
             title_frame,
-            text="  ·  Call to Arms / Gates of Hell Modding Tool",
+            text="  ·  " + self._t("app.subtitle"),
             style="Subtitle.TLabel",
         ).pack(side=tk.LEFT, padx=(10, 0))
+
+        # Language selector (top right)
+        lang_frame = ttk.Frame(title_frame)
+        lang_frame.pack(side=tk.RIGHT)
+
+        ttk.Label(lang_frame, text=self._t("lang.selector"), style="Subtitle.TLabel").pack(
+            side=tk.LEFT, padx=(0, 5)
+        )
+        self.lang_var = tk.StringVar(value=self.i18n.lang)
+        self.lang_combo = ttk.Combobox(
+            lang_frame,
+            textvariable=self.lang_var,
+            values=[f"{LANGUAGES[c][1]} {LANGUAGES[c][0]}" for c in LANGUAGES],
+            state="readonly",
+            width=18,
+        )
+        self.lang_combo.current(list(LANGUAGES.keys()).index(self.i18n.lang))
+        self.lang_combo.pack(side=tk.LEFT)
+        self.lang_combo.bind("<<ComboboxSelected>>", self._on_lang_change)
 
         # ── Directory selector ──
         dir_frame = ttk.Frame(self.root)
         dir_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
 
-        ttk.Label(dir_frame, text="Mod directory (salida_mod/):").pack(side=tk.LEFT)
+        self.lbl_mod_dir = ttk.Label(dir_frame, text=self._t("label.mod_dir"))
+        self.lbl_mod_dir.pack(side=tk.LEFT)
+
         self.mod_entry = ttk.Entry(dir_frame, textvariable=self.mod_dir_var, width=60)
         self.mod_entry.pack(side=tk.LEFT, padx=(10, 5), fill=tk.X, expand=True)
-        ttk.Button(dir_frame, text="Browse…", command=self._browse_mod_dir).pack(
-            side=tk.LEFT, padx=(0, 5)
-        )
-        ttk.Label(
-            dir_frame,
-            text="Select your salida_mod/ folder",
-            style="Subtitle.TLabel",
-        ).pack(side=tk.LEFT, padx=(10, 0))
+
+        self.btn_browse_mod = ttk.Button(dir_frame, text=self._t("button.browse"), command=self._browse_mod_dir)
+        self.btn_browse_mod.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.lbl_mod_help = ttk.Label(dir_frame, text=self._t("help.mod_dir"), style="Subtitle.TLabel")
+        self.lbl_mod_help.pack(side=tk.LEFT, padx=(10, 0))
 
         # ── Notebook ──
         self.notebook = ttk.Notebook(self.root)
@@ -168,11 +232,11 @@ class Gem2ValidatorGUI:
         self.tab_prere = ttk.Frame(self.notebook, style="Panel.TFrame")
         self.tab_rebuild = ttk.Frame(self.notebook, style="Panel.TFrame")
 
-        self.notebook.add(self.tab_validate, text="Validate and Repair")
-        self.notebook.add(self.tab_sync, text="Sync with Game")
-        self.notebook.add(self.tab_log, text="game.log Viewer")
-        self.notebook.add(self.tab_prere, text="Pre-RE Scan")
-        self.notebook.add(self.tab_rebuild, text="Rebuild MDL")
+        self.notebook.add(self.tab_validate, text=self._t("tab.validate"))
+        self.notebook.add(self.tab_sync, text=self._t("tab.sync"))
+        self.notebook.add(self.tab_log, text=self._t("tab.log"))
+        self.notebook.add(self.tab_prere, text=self._t("tab.prere"))
+        self.notebook.add(self.tab_rebuild, text=self._t("tab.rebuild"))
 
         self._build_validate_tab()
         self._build_sync_tab()
@@ -184,8 +248,8 @@ class Gem2ValidatorGUI:
         status_frame = ttk.Frame(self.root)
         status_frame.pack(fill=tk.X, padx=20, pady=(5, 15))
 
-        self.status_var = tk.StringVar(value="Ready")
-        self.exit_var = tk.StringVar(value="Exit code: —")
+        self.status_var = tk.StringVar(value=self._t("status.ready"))
+        self.exit_var = tk.StringVar(value=self._t("status.exit_code"))
 
         ttk.Label(status_frame, textvariable=self.status_var, style="Status.TLabel").pack(
             side=tk.LEFT
@@ -200,24 +264,29 @@ class Gem2ValidatorGUI:
         frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
         # Options
-        opts = ttk.LabelFrame(frame, text="Validation options")
-        opts.pack(fill=tk.X, pady=(0, 10))
+        self.group_options = ttk.LabelFrame(frame, text=self._t("group.options"))
+        self.group_options.pack(fill=tk.X, pady=(0, 10))
 
-        ttk.Checkbutton(
-            opts,
-            text="Auto-fix repairable errors (--fix)",
+        self.chk_autofix = ttk.Checkbutton(
+            self.group_options,
+            text=self._t("chk.autofix"),
             variable=self.auto_fix_var,
-        ).pack(anchor=tk.W, padx=10, pady=3)
-        ttk.Checkbutton(
-            opts,
-            text="Sync to installed game (--sync)",
+        )
+        self.chk_autofix.pack(anchor=tk.W, padx=10, pady=3)
+
+        self.chk_sync = ttk.Checkbutton(
+            self.group_options,
+            text=self._t("chk.sync"),
             variable=self.sync_var,
-        ).pack(anchor=tk.W, padx=10, pady=3)
-        ttk.Checkbutton(
-            opts,
-            text="Verbose mode (-v)",
+        )
+        self.chk_sync.pack(anchor=tk.W, padx=10, pady=3)
+
+        self.chk_verbose = ttk.Checkbutton(
+            self.group_options,
+            text=self._t("chk.verbose"),
             variable=self.verbose_var,
-        ).pack(anchor=tk.W, padx=10, pady=3)
+        )
+        self.chk_verbose.pack(anchor=tk.W, padx=10, pady=3)
 
         # Buttons
         btn_frame = ttk.Frame(frame)
@@ -225,7 +294,7 @@ class Gem2ValidatorGUI:
 
         self.btn_validate = ttk.Button(
             btn_frame,
-            text="Validate",
+            text=self._t("button.validate"),
             style="Accent.TButton",
             command=lambda: self._run_validator(fix=False, sync=False),
         )
@@ -233,7 +302,7 @@ class Gem2ValidatorGUI:
 
         self.btn_fix = ttk.Button(
             btn_frame,
-            text="Validate + Repair + Sync",
+            text=self._t("button.validate_fix"),
             style="Success.TButton",
             command=lambda: self._run_validator(fix=True, sync=True),
         )
@@ -241,7 +310,7 @@ class Gem2ValidatorGUI:
 
         self.btn_stop = ttk.Button(
             btn_frame,
-            text="Stop",
+            text=self._t("button.stop"),
             style="Danger.TButton",
             command=self._stop_process,
             state=tk.DISABLED,
@@ -253,11 +322,11 @@ class Gem2ValidatorGUI:
         self.progress.pack(fill=tk.X, pady=(0, 10))
 
         # Output area
-        out_frame = ttk.LabelFrame(frame, text="Validator output")
-        out_frame.pack(fill=tk.BOTH, expand=True)
+        self.group_output = ttk.LabelFrame(frame, text="Validator output")
+        self.group_output.pack(fill=tk.BOTH, expand=True)
 
         self.output_validate = scrolledtext.ScrolledText(
-            out_frame,
+            self.group_output,
             wrap=tk.WORD,
             font=("Consolas", 10),
             background="#1e1e1e",
@@ -273,7 +342,6 @@ class Gem2ValidatorGUI:
         self.output_validate.tag_configure("error", foreground="#f44336")
         self.output_validate.tag_configure("warn", foreground="#ff9800")
         self.output_validate.tag_configure("info", foreground="#2196f3")
-        self.output_validate.tag_configure("title", foreground="#9cccff", font=("Consolas", 10, "bold"))
 
     # ── Tab: Sync with Game ──
     def _build_sync_tab(self):
@@ -283,21 +351,21 @@ class Gem2ValidatorGUI:
         dir_frame = ttk.Frame(frame)
         dir_frame.pack(fill=tk.X, pady=(0, 15))
 
-        ttk.Label(dir_frame, text="Installed directory (mods/<your_mod>/):").pack(side=tk.LEFT)
-        self.installed_entry = ttk.Entry(
-            dir_frame, textvariable=self.installed_dir_var, width=60
-        )
+        self.lbl_installed_dir = ttk.Label(dir_frame, text=self._t("label.installed_dir"))
+        self.lbl_installed_dir.pack(side=tk.LEFT)
+
+        self.installed_entry = ttk.Entry(dir_frame, textvariable=self.installed_dir_var, width=60)
         self.installed_entry.pack(side=tk.LEFT, padx=(10, 5), fill=tk.X, expand=True)
-        ttk.Button(dir_frame, text="Browse…", command=self._browse_installed_dir).pack(
-            side=tk.LEFT, padx=(0, 5)
-        )
+
+        self.btn_browse_installed = ttk.Button(dir_frame, text=self._t("button.browse"), command=self._browse_installed_dir)
+        self.btn_browse_installed.pack(side=tk.LEFT, padx=(0, 5))
 
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill=tk.X, pady=(0, 10))
 
         self.btn_sync = ttk.Button(
             btn_frame,
-            text="Sync now",
+            text=self._t("button.sync_now"),
             style="Accent.TButton",
             command=self._run_sync,
         )
@@ -305,7 +373,7 @@ class Gem2ValidatorGUI:
 
         self.btn_stop_sync = ttk.Button(
             btn_frame,
-            text="Stop",
+            text=self._t("button.stop"),
             style="Danger.TButton",
             command=self._stop_process,
             state=tk.DISABLED,
@@ -315,11 +383,11 @@ class Gem2ValidatorGUI:
         self.progress_sync = ttk.Progressbar(frame, mode="indeterminate")
         self.progress_sync.pack(fill=tk.X, pady=(0, 10))
 
-        out_frame = ttk.LabelFrame(frame, text="Sync output")
-        out_frame.pack(fill=tk.BOTH, expand=True)
+        self.group_sync_output = ttk.LabelFrame(frame, text="Sync output")
+        self.group_sync_output.pack(fill=tk.BOTH, expand=True)
 
         self.output_sync = scrolledtext.ScrolledText(
-            out_frame,
+            self.group_sync_output,
             wrap=tk.WORD,
             font=("Consolas", 10),
             background="#1e1e1e",
@@ -343,32 +411,34 @@ class Gem2ValidatorGUI:
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill=tk.X, pady=(0, 10))
 
-        ttk.Button(
+        self.btn_open_log = ttk.Button(
             btn_frame,
-            text="Open game.log",
+            text=self._t("button.open_log"),
             style="Accent.TButton",
             command=self._open_game_log,
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.btn_open_log.pack(side=tk.LEFT, padx=(0, 8))
 
-        ttk.Button(
+        self.btn_refresh_log = ttk.Button(
             btn_frame,
-            text="Refresh",
+            text=self._t("button.refresh"),
             command=self._refresh_game_log,
-        ).pack(side=tk.LEFT)
+        )
+        self.btn_refresh_log.pack(side=tk.LEFT)
 
-        self.only_errors_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(
+        self.chk_errors_only = ttk.Checkbutton(
             btn_frame,
-            text="Show errors only",
+            text=self._t("chk.errors_only"),
             variable=self.only_errors_var,
             command=self._refresh_game_log,
-        ).pack(side=tk.LEFT, padx=(15, 0))
+        )
+        self.chk_errors_only.pack(side=tk.LEFT, padx=(15, 0))
 
-        out_frame = ttk.LabelFrame(frame, text="game.log content")
-        out_frame.pack(fill=tk.BOTH, expand=True)
+        self.group_log = ttk.LabelFrame(frame, text=self._t("group.log_viewer"))
+        self.group_log.pack(fill=tk.BOTH, expand=True)
 
         self.output_log = scrolledtext.ScrolledText(
-            out_frame,
+            self.group_log,
             wrap=tk.WORD,
             font=("Consolas", 10),
             background="#1e1e1e",
@@ -391,28 +461,28 @@ class Gem2ValidatorGUI:
         frame = ttk.Frame(self.tab_prere, style="Panel.TFrame")
         frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
-        info = ttk.Label(
+        self.lbl_prere_info = ttk.Label(
             frame,
-            text="Static pre-analysis scanner (file signatures, pattern scanning). "
-                 "Run BEFORE the main validator to detect early issues.",
+            text=self._t("group.prere_info"),
             style="Subtitle.TLabel",
             wraplength=900,
         )
-        info.pack(fill=tk.X, pady=(0, 15))
+        self.lbl_prere_info.pack(fill=tk.X, pady=(0, 15))
 
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill=tk.X, pady=(0, 10))
 
-        ttk.Button(
+        self.btn_prere_run = ttk.Button(
             btn_frame,
-            text="Run Pre-RE Scan",
+            text=self._t("button.prere_run"),
             style="Accent.TButton",
             command=lambda: self._run_script("pre_re_scan.py", [self.mod_dir_var.get(), "--verbose"]),
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.btn_prere_run.pack(side=tk.LEFT, padx=(0, 8))
 
         self.btn_stop_prere = ttk.Button(
             btn_frame,
-            text="Stop",
+            text=self._t("button.stop"),
             style="Danger.TButton",
             command=self._stop_process,
             state=tk.DISABLED,
@@ -422,11 +492,11 @@ class Gem2ValidatorGUI:
         self.progress_prere = ttk.Progressbar(frame, mode="indeterminate")
         self.progress_prere.pack(fill=tk.X, pady=(0, 10))
 
-        out_frame = ttk.LabelFrame(frame, text="Scanner output")
-        out_frame.pack(fill=tk.BOTH, expand=True)
+        self.group_prere_output = ttk.LabelFrame(frame, text="Scanner output")
+        self.group_prere_output.pack(fill=tk.BOTH, expand=True)
 
         self.output_prere = scrolledtext.ScrolledText(
-            out_frame,
+            self.group_prere_output,
             wrap=tk.WORD,
             font=("Consolas", 10),
             background="#1e1e1e",
@@ -447,28 +517,28 @@ class Gem2ValidatorGUI:
         frame = ttk.Frame(self.tab_rebuild, style="Panel.TFrame")
         frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
 
-        info = ttk.Label(
+        self.lbl_rebuild_info = ttk.Label(
             frame,
-            text="Reorganizes the .mdl exported by the GEM2 plugin (distributes {VolumeView} "
-                 "per bone, reads Matrix34 correctly). Run after Blender export.",
+            text=self._t("group.rebuild_info"),
             style="Subtitle.TLabel",
             wraplength=900,
         )
-        info.pack(fill=tk.X, pady=(0, 15))
+        self.lbl_rebuild_info.pack(fill=tk.X, pady=(0, 15))
 
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill=tk.X, pady=(0, 10))
 
-        ttk.Button(
+        self.btn_rebuild_run = ttk.Button(
             btn_frame,
-            text="Run rebuild_mdl.py",
+            text=self._t("button.rebuild_run"),
             style="Accent.TButton",
             command=self._run_rebuild_mdl,
-        ).pack(side=tk.LEFT, padx=(0, 8))
+        )
+        self.btn_rebuild_run.pack(side=tk.LEFT, padx=(0, 8))
 
         self.btn_stop_rebuild = ttk.Button(
             btn_frame,
-            text="Stop",
+            text=self._t("button.stop"),
             style="Danger.TButton",
             command=self._stop_process,
             state=tk.DISABLED,
@@ -478,11 +548,11 @@ class Gem2ValidatorGUI:
         self.progress_rebuild = ttk.Progressbar(frame, mode="indeterminate")
         self.progress_rebuild.pack(fill=tk.X, pady=(0, 10))
 
-        out_frame = ttk.LabelFrame(frame, text="Rebuild MDL output")
-        out_frame.pack(fill=tk.BOTH, expand=True)
+        self.group_rebuild_output = ttk.LabelFrame(frame, text="Rebuild MDL output")
+        self.group_rebuild_output.pack(fill=tk.BOTH, expand=True)
 
         self.output_rebuild = scrolledtext.ScrolledText(
-            out_frame,
+            self.group_rebuild_output,
             wrap=tk.WORD,
             font=("Consolas", 10),
             background="#1e1e1e",
@@ -498,14 +568,85 @@ class Gem2ValidatorGUI:
         self.output_rebuild.tag_configure("warn", foreground="#ff9800")
         self.output_rebuild.tag_configure("info", foreground="#2196f3")
 
+    # ── Language change ──
+    def _on_lang_change(self, event=None):
+        selection = self.lang_var.get()
+        # Extract language code from selection (e.g. "🇺🇸 English" -> "en")
+        for code, (name, flag) in LANGUAGES.items():
+            if selection == f"{flag} {name}":
+                self.i18n.set_lang(code)
+                self._t = self.i18n.t
+                self._refresh_all_texts()
+                break
+
+    def _refresh_all_texts(self):
+        """Refresh all UI texts after language change."""
+        self.root.title(self._t("app.title"))
+        self.lbl_title.config(text=self._t("app.title"))
+
+        # Rebuild notebook tabs with new text
+        self.notebook.tab(self.tab_validate, text=self._t("tab.validate"))
+        self.notebook.tab(self.tab_sync, text=self._t("tab.sync"))
+        self.notebook.tab(self.tab_log, text=self._t("tab.log"))
+        self.notebook.tab(self.tab_prere, text=self._t("tab.prere"))
+        self.notebook.tab(self.tab_rebuild, text=self._t("tab.rebuild"))
+
+        # Directory selector
+        self.lbl_mod_dir.config(text=self._t("label.mod_dir"))
+        self.btn_browse_mod.config(text=self._t("button.browse"))
+        self.lbl_mod_help.config(text=self._t("help.mod_dir"))
+        self.lbl_installed_dir.config(text=self._t("label.installed_dir"))
+        self.btn_browse_installed.config(text=self._t("button.browse"))
+
+        # Validate tab
+        self.group_options.config(text=self._t("group.options"))
+        self.chk_autofix.config(text=self._t("chk.autofix"))
+        self.chk_sync.config(text=self._t("chk.sync"))
+        self.chk_verbose.config(text=self._t("chk.verbose"))
+        self.btn_validate.config(text=self._t("button.validate"))
+        self.btn_fix.config(text=self._t("button.validate_fix"))
+        self.btn_stop.config(text=self._t("button.stop"))
+        self.group_output.config(text="Validator output")
+
+        # Sync tab
+        self.btn_sync.config(text=self._t("button.sync_now"))
+        self.btn_stop_sync.config(text=self._t("button.stop"))
+        self.group_sync_output.config(text="Sync output")
+
+        # Log tab
+        self.btn_open_log.config(text=self._t("button.open_log"))
+        self.btn_refresh_log.config(text=self._t("button.refresh"))
+        self.chk_errors_only.config(text=self._t("chk.errors_only"))
+        self.group_log.config(text=self._t("group.log_viewer"))
+
+        # Pre-RE tab
+        self.lbl_prere_info.config(text=self._t("group.prere_info"))
+        self.btn_prere_run.config(text=self._t("button.prere_run"))
+        self.btn_stop_prere.config(text=self._t("button.stop"))
+        self.group_prere_output.config(text="Scanner output")
+
+        # Rebuild tab
+        self.lbl_rebuild_info.config(text=self._t("group.rebuild_info"))
+        self.btn_rebuild_run.config(text=self._t("button.rebuild_run"))
+        self.btn_stop_rebuild.config(text=self._t("button.stop"))
+        self.group_rebuild_output.config(text="Rebuild MDL output")
+
+        # Status bar
+        self.status_var.set(self._t("status.ready"))
+        self.exit_var.set(self._t("status.exit_code"))
+
+        # Language selector display
+        current = f"{LANGUAGES[self.i18n.lang][1]} {LANGUAGES[self.i18n.lang][0]}"
+        self.lang_var.set(current)
+
     # ── Actions ──
     def _browse_mod_dir(self):
-        d = filedialog.askdirectory(title="Select salida_mod/ folder")
+        d = filedialog.askdirectory(title=self._t("dialog.error_no_file"))
         if d:
             self.mod_dir_var.set(d)
 
     def _browse_installed_dir(self):
-        d = filedialog.askdirectory(title="Select installed mods/<your_mod>/ folder")
+        d = filedialog.askdirectory(title=self._t("dialog.error_no_installed"))
         if d:
             self.installed_dir_var.set(d)
 
@@ -522,10 +663,10 @@ class Gem2ValidatorGUI:
 
         if running:
             self.progress.start(10)
-            self.status_var.set("Running…")
+            self.status_var.set(self._t("status.running"))
         else:
             self.progress.stop()
-            self.status_var.set("Ready")
+            self.status_var.set(self._t("status.ready"))
 
     def _append_output(self, widget: scrolledtext.ScrolledText, text: str, tag: str = None):
         widget.insert(tk.END, text, tag)
@@ -538,7 +679,7 @@ class Gem2ValidatorGUI:
     def _run_validator(self, fix: bool, sync: bool):
         mod_dir = self.mod_dir_var.get()
         if not Path(mod_dir).exists():
-            messagebox.showerror("Error", f"Directory does not exist:\n{mod_dir}")
+            messagebox.showerror(self._t("dialog.error_title"), f"{self._t('dialog.error_dir')}\n{mod_dir}")
             return
 
         self._set_running(True)
@@ -556,9 +697,8 @@ class Gem2ValidatorGUI:
 
     def _run_sync(self):
         mod_dir = self.mod_dir_var.get()
-        installed = self.installed_dir_var.get()
         if not Path(mod_dir).exists():
-            messagebox.showerror("Error", f"Output directory does not exist:\n{mod_dir}")
+            messagebox.showerror(self._t("dialog.error_title"), f"{self._t('dialog.error_dir')}\n{mod_dir}")
             return
 
         self._set_running(True)
@@ -570,7 +710,7 @@ class Gem2ValidatorGUI:
     def _run_script(self, script_name: str, extra_args=None):
         script_path = SCRIPTS_DIR / script_name
         if not script_path.exists():
-            messagebox.showerror("Error", f"Script not found:\n{script_path}")
+            messagebox.showerror(self._t("dialog.error_title"), f"{self._t('dialog.error_script')}\n{script_path}")
             return
 
         self._set_running(True)
@@ -594,9 +734,8 @@ class Gem2ValidatorGUI:
         raw_mdl = Path(mod_dir) / "resource" / "entity" / "-vehicle" / "iron_nest" / "iron_nest_plugin_raw.mdl"
         if not raw_mdl.exists():
             messagebox.showerror(
-                "Error",
-                f"Raw MDL file not found:\n{raw_mdl}\n\n"
-                "Run the Blender export first.",
+                self._t("dialog.error_title"),
+                f"{self._t('dialog.error_raw_mdl')}",
             )
             return
 
@@ -635,27 +774,22 @@ class Gem2ValidatorGUI:
 
         self.root.after(0, lambda: self._append_output(
             output_widget,
-            f"\n--- Process finished with exit code: {exit_code} ---\n",
+            f"\n--- {self._t('dialog.process_finished', code=exit_code)} ---\n",
             "ok" if exit_code == 0 else "error",
         ))
-        self.root.after(0, lambda: self.exit_var.set(f"Exit code: {exit_code}"))
+        self.root.after(0, lambda: self.exit_var.set(f"{self._t('status.exit_code', code='—')[:18]}{exit_code}"))
         self.root.after(0, lambda: self._set_running(False))
 
     def _stop_process(self):
         messagebox.showinfo(
-            "Stop",
-            "To stop a running process, close the application or use Ctrl+C in the terminal.\n"
-            "Forced termination from the GUI is not supported in this version.",
+            self._t("dialog.error_title"),
+            self._t("dialog.stop_info"),
         )
 
     # ── game.log ──
-    def _game_log_path(self):
-        """No default path: user must select their game.log manually."""
-        return None
-
     def _open_game_log(self):
         log_path = filedialog.askopenfilename(
-            title="Select game.log",
+            title=self._t("dialog.log_no_file"),
             filetypes=[("Log files", "*.log"), ("All files", "*.*")],
         )
         if not log_path:
@@ -666,11 +800,11 @@ class Gem2ValidatorGUI:
             else:
                 os.startfile(log_path)  # type: ignore[attr-defined]
         except Exception as e:
-            messagebox.showerror("Error", f"Could not open file:\n{e}")
+            messagebox.showerror(self._t("dialog.error_title"), f"Could not open file:\n{e}")
 
     def _refresh_game_log(self):
         log_path = filedialog.askopenfilename(
-            title="Select game.log",
+            title=self._t("dialog.log_no_file"),
             filetypes=[("Log files", "*.log"), ("All files", "*.*")],
         )
         if not log_path:
@@ -682,7 +816,7 @@ class Gem2ValidatorGUI:
         if not p.exists():
             self._append_output(
                 self.output_log,
-                f"File not found:\n{log_path}\n",
+                f"{self._t('dialog.log_not_found')}\n{log_path}\n",
                 "error",
             )
             return
@@ -691,7 +825,7 @@ class Gem2ValidatorGUI:
             with open(log_path, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
         except Exception as e:
-            self._append_output(self.output_log, f"Error reading game.log: {e}\n", "error")
+            self._append_output(self.output_log, f"{self._t('dialog.log_read_error')} {e}\n", "error")
             return
 
         only_errors = self.only_errors_var.get()

@@ -44,7 +44,40 @@ git clone https://github.com/Mauricio5494/GEM2Engine_files_validator.git
 cd GEM2Engine_files_validator
 ```
 
-No external Python dependencies are required — it runs on Python 3.8+ with the standard library only.
+No se requieren dependencias externas de Python. La aplicación usa solo la biblioteca estándar (**tkinter**, incluida con Python 3.8+ en la mayoría de instalaciones).
+
+### Dependencias del sistema
+
+| Sistema | Requisito |
+|---------|-----------|
+| **Windows** | Python 3.8+ instalado desde [python.org](https://python.org). Durante la instalación, marca la casilla **"tcl/tk and IDLE"**. |
+| **Linux** | Python 3.8+ y el paquete `python3-tk` (en Debian/Ubuntu: `sudo apt install python3-tk`). |
+| **macOS** | **No soportado** (por decisión del autor). |
+
+## Running without a terminal (double-click)
+
+You do **not** need to open a terminal to use the GUI.
+
+### Windows
+
+Double-click **`run_gui.bat`**. It launches the app with `pythonw.exe` (no console window).
+
+### Linux
+
+1. Make the launcher executable:
+
+   ```bash
+   chmod +x run_gui.sh
+   ```
+
+2. Double-click **`run_gui.sh`** in your file manager, or run:
+
+   ```bash
+   ./run_gui.sh
+   ```
+
+3. Optionally, copy **`GEM2Validator.desktop`** to `~/.local/share/applications/` to add it to your desktop environment's application menu.
+
 
 ## Usage
 
@@ -76,13 +109,15 @@ python3 salida_mod/tools/gem2_validator.py salida_mod/ --sync -v
 
 ## Graphical User Interface (GUI)
 
-For users who prefer not to use the terminal, a Tkinter-based desktop application is included under `gui/`. It requires no external dependencies — just Python 3.8+ with tkinter.
+A Tkinter-based desktop application is included under `gui/`. It requires no external dependencies — just Python 3.8+ with tkinter.
 
-### Launching the GUI
+### Launching the GUI (no terminal needed)
 
-```bash
-python3 gui/main.py
-```
+| Platform | File | How to run |
+|----------|------|------------|
+| **Windows** | `run_gui.bat` | Double-click (uses `pythonw.exe`, no console window) |
+| **Linux** | `run_gui.sh` | Double-click or `./run_gui.sh` (make executable with `chmod +x`) |
+| **Any** | `gui/main.py` | `python3 gui/main.py` (fallback) |
 
 ### What the GUI does
 
@@ -94,9 +129,19 @@ python3 gui/main.py
 | **Pre-RE Scan** | Run the static pre-scan scanner (`pre_re_scan.py`) for early issue detection before the main validator. |
 | **Rebuild MDL** | Run `rebuild_mdl.py` to redistribute `{VolumeView}` blocks per bone and fix `Matrix34` transforms after Blender export. |
 
-### Screenshots (coming soon)
+Before using any tab, click **Examinar…** (Browse) to select your `salida_mod/` directory and, for sync, your installed `mods/iron_nest/` folder.
 
-Add screenshots of the GUI in action here.
+### Creating standalone executables (for releases)
+
+To distribute the app as a single `.exe` (Windows) or binary (Linux) without requiring users to install Python, use **PyInstaller**:
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name GEM2Validator gui/main.py
+```
+
+This produces a standalone executable in `dist/`. Releases can be built for Windows and Linux. **macOS is not supported.**
+
 
 
 ## Repository Structure
